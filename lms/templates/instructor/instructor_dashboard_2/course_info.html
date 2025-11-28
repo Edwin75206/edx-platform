@@ -5,53 +5,53 @@ from openedx.core.djangolib.markup import HTML, Text
 %>
 
 %if settings.FEATURES.get('DISPLAY_ANALYTICS_ENROLLMENTS') or section_data.get('enrollment_message'):
-  <h4 class="hd hd-4">${_("Enrollment Information")}</h4>
+  <h4 class="hd hd-4">${_("Información de inscripciones")}</h4>
   <div class="enrollment-wrapper">
     %if settings.FEATURES.get('DISPLAY_ANALYTICS_ENROLLMENTS'):
-      ## Translators: 'track' refers to the enrollment type ('honor', 'verified', or 'audit')
+      ## 'track' = tipo de inscripción ('honor', 'verified', 'audit', etc.)
       <% modes = section_data['enrollment_count'] %>
         <table>
-            <caption class="tip">${_("Number of enrollees (admins, staff, and students) by track")}</caption>
+            <caption class="tip">${_("Número de inscritos (administradores, personal y estudiantes) por tipo de inscripción")}</caption>
             <tr>
-                <th scope="row">${_("Verified")}</th><td>${modes['verified']}</td>
+                <th scope="row">${_("Verificadxxo")}</th><td>${modes['verified']}</td>
             </tr>
             <tr>
-                <th scope="row">${_("Audit")}</th><td>${modes['audit']}</td>
+                <th scope="row">${_("Auditoría")}</th><td>${modes['audit']}</td>
             </tr>
             <tr>
                 <th scope="row">${_("Honor")}</th><td>${modes['honor']}</td>
             </tr>
             <tr>
-                <th scope="row">${_("Professional")}</th><td>${modes['professional'] + modes['no-id-professional']}</td>
+                <th scope="row">${_("Profesional")}</th><td>${modes['professional'] + modes['no-id-professional']}</td>
             </tr>
             %if modes["executive-education"] > 0:
               <tr>
-                  <th scope="row">${_("Executive Education")}</th><td>${modes['executive-education']}</td>
+                  <th scope="row">${_("Educación Ejecutiva")}</th><td>${modes['executive-education']}</td>
               </tr>
             %endif
             %if modes["unpaid-executive-education"] > 0:
               <tr>
-                  <th scope="row">${_("Unpaid Executive Education")}</th><td>${modes['unpaid-executive-education']}</td>
+                  <th scope="row">${_("Educación Ejecutiva (no pagada)")}</th><td>${modes['unpaid-executive-education']}</td>
               </tr>
             %endif
             %if modes["paid-executive-education"] > 0:
               <tr>
-                  <th scope="row">${_("Paid Executive Education")}</th><td>${modes['paid-executive-education']}</td>
+                  <th scope="row">${_("Educación Ejecutiva (pagada)")}</th><td>${modes['paid-executive-education']}</td>
               </tr>
             %endif
             %if modes['masters'] > 0:
                 <tr>
-                    <th scope="row">${_("Master's")}</th><td>${modes['masters']}</td>
+                    <th scope="row">${_("Maestría")}</th><td>${modes['masters']}</td>
                 </tr>
             %endif
             %if modes["unpaid-bootcamp"] > 0:
               <tr>
-                  <th scope="row">${_("Unpaid Bootcamp")}</th><td>${modes['unpaid-bootcamp']}</td>
+                  <th scope="row">${_("Bootcamp (no pagado)")}</th><td>${modes['unpaid-bootcamp']}</td>
               </tr>
             %endif
             %if modes["paid-bootcamp"] > 0:
               <tr>
-                  <th scope="row">${_("Paid Bootcamp")}</th><td>${modes['paid-bootcamp']}</td>
+                  <th scope="row">${_("Bootcamp (pagado)")}</th><td>${modes['paid-bootcamp']}</td>
               </tr>
             %endif
             <tr style="color:green;border-top:1px solid #000">
@@ -71,65 +71,65 @@ from openedx.core.djangolib.markup import HTML, Text
 %endif
 
 <div class="basic-wrapper">
-  <h4 class="hd hd-4">${_("Basic Course Information")}</h4>
+  <h4 class="hd hd-4">${_("Información básica del curso")}</h4>
 
   <ul class="list-input">
     <li class="field text is-not-editable" id="field-course-display-name">
-      <label for="course-display-name">${_("Course Name:")}</label>
+      <label for="course-display-name">${_("Nombre del curso:")}</label>
       <b>${ section_data['course_display_name']}</b>
     </li>
 
     <li class="field text is-not-editable" id="field-course-name">
-      <label for="course-name">${_("Course Run:")}</label>
+      <label for="course-name">${_("Cohorte / edición del curso:")}</label>
       <b>${ section_data['course_id'].run}</b>
     </li>
 
     <li class="field text is-not-editable" id="field-course-number">
-      <label for="course-number">${_("Course Number:")}</label>
+      <label for="course-number">${_("Clave del curso:")}</label>
       <b>${ section_data['course_number']}</b>
     </li>
 
     <li class="field text is-not-editable" id="field-course-organization">
-      <label for="course-organization">${_("Organization:")}</label>
+      <label for="course-organization">${_("Organización:")}</label>
       <b>${ section_data['course_org']}</b>
     </li>
 
     <li class="field text is-not-editable" id="field-course-start-date">
-      <label for="course-start-date">${_("Course Start Date:")}</label>
+      <label for="course-start-date">${_("Fecha de inicio del curso:")}</label>
       <b class="localized-datetime" data-datetime="${section_data['start_date']}" data-timezone="${user_timezone}" data-language="${user_language}"></b>
     </li>
 
     <li class="field text is-not-editable" id="field-course-end-date">
-      <label for="course-end-date">${_("Course End Date:")}</label>
+      <label for="course-end-date">${_("Fecha de término del curso:")}</label>
         % if course.end is None:
-            <b>${_("No end date set")}</b>
+            <b>${_("Sin fecha de término definida")}</b>
         % else:
             <b class="localized-datetime" data-datetime="${section_data['end_date']}" data-timezone="${user_timezone}" data-language="${user_language}"></b>
         % endif
     </li>
     <li class="field text is-not-editable" id="field-course-started">
-      <label for="start-date">${_("Has the course started?")}</label>
+      <label for="start-date">${_("¿El curso ya comenzó?")}</label>
 
-      <b>${_("Yes") if section_data['has_started'] else _("No")}</b>
+      <b>${_("Sí") if section_data['has_started'] else _("No")}</b>
 
     </li>
 
     <li class="field text is-not-editable" id="field-course-ended">
-      <label for="start-date">${_("Has the course ended?")}</label>
+      <label for="start-date">${_("¿El curso ya terminó?")}</label>
       %if section_data['has_ended']:
-      <b>${_("Yes")}</b>
+      <b>${_("Sí")}</b>
       %else:
       <b>${_("No")}</b>
       %endif
     </li>
 
     <li class="field text is-not-editable" id="field-course-num-sections">
-      <label for="course-num-sections">${_("Number of sections:")}</label>
+      <label for="course-num-sections">${_("Número de secciones:")}</label>
       <b>${ section_data['num_sections'] }</b>
     </li>
 
     <li class="field text is-not-editable" id="field-grade-cutoffs">
-      <label for="start-date">${_("Grade Cutoffs:")}</label>
+      <label for="start-date">${_("Criterios de aprobación (grade cutoffs):")}</label>
       <b>${ section_data['grade_cutoffs'] }</b>
     </li>
   </ul>
@@ -139,9 +139,9 @@ from openedx.core.djangolib.markup import HTML, Text
 %if settings.FEATURES.get('ENABLE_INSTRUCTOR_BACKGROUND_TASKS'):
   <div class="running-tasks-container action-type-container">
     <hr>
-    <h4 class="hd hd-4"> ${_("Pending Tasks")} </h4>
+    <h4 class="hd hd-4"> ${_("Tareas en proceso")} </h4>
     <div class="running-tasks-section">
-      <p>${_("The status for any active tasks appears in a table below.")} </p>
+      <p>${_("El estado de las tareas activas se mostrará en la tabla de abajo.")} </p>
       <br />
 
       <div class="running-tasks-table" data-endpoint="${ section_data['list_instructor_tasks_url'] }"></div>
@@ -156,7 +156,7 @@ from openedx.core.djangolib.markup import HTML, Text
     <hr>
     <p>
     <div class="toggle-wrapper">
-      <h4 class="hd hd-4 title">${_("Course Warnings")}:</h4>
+      <h4 class="hd hd-4 title">${_("Advertencias del curso")}:</h4>
       <div class="triangle"></div>
     </div>
     <div class="course-errors-visibility-wrapper">
