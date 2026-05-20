@@ -9,7 +9,7 @@ define(['jquery', 'underscore', 'backbone', 'gettext', 'js/views/pages/base_page
     'js/views/pages/container_subviews', 'js/views/unit_outline', 'js/views/utils/xblock_utils',
     'common/js/components/views/feedback_notification', 'common/js/components/views/feedback_prompt',
     'js/views/utils/tagging_drawer_utils', 'js/utils/module', 'js/views/modals/preview_v2_library_changes',
-    'js/views/modals/select_v2_library_content'
+    'js/views/modals/select_v2_library_content', 'js/views/modals/save_to_library_modal'
 ],
 function($, _, Backbone, gettext, BasePage,
     ViewUtils, ContainerView, XBlockView,
@@ -17,7 +17,7 @@ function($, _, Backbone, gettext, BasePage,
     XBlockInfo, XBlockStringFieldEditor, XBlockAccessEditor,
     ContainerSubviews, UnitOutlineView, XBlockUtils,
     NotificationView, PromptView, TaggingDrawerUtils, ModuleUtils,
-    PreviewLibraryChangesModal, SelectV2LibraryContent) {
+    PreviewLibraryChangesModal, SelectV2LibraryContent, SaveToLibraryModal) {
     'use strict';
 
     var XBlockContainerPage = BasePage.extend({
@@ -28,6 +28,7 @@ function($, _, Backbone, gettext, BasePage,
             'click .access-button': 'editVisibilitySettings',
             'click .duplicate-button': 'duplicateXBlock',
             'click .copy-button': 'copyXBlock',
+            'click .save-to-library-button': 'saveXBlockToLibrary',
             'click .move-button': 'showMoveXBlockModal',
             'click .delete-button': 'deleteXBlock',
             'click .library-sync-button': 'showXBlockLibraryChangesPreview',
@@ -564,47 +565,126 @@ function($, _, Backbone, gettext, BasePage,
             } catch (e) {
                 console.error(e);
             }
-            const clipboardEndpoint = "/api/content-staging/v1/clipboard/";
             const element = this.findXBlockElement(event.target);
             const usageKeyToCopy = element.data('locator');
-            // Start showing a "Copying" notification:
-            ViewUtils.runOperationShowingMessage(gettext('Copying'), () => {
-                return $.postJSON(
-                    clipboardEndpoint,
-                    { usage_key: usageKeyToCopy },
-                ).then((data) => {
-                    const status = data.content?.status;
-                    if (status === "ready") {
-                        // The XBlock has been copied and is ready to use.
-                        this.refreshPasteButton(data); // Update our UI
-                        this.clipboardBroadcastChannel.postMessage(data); // And notify any other open tabs
-                        return data;
-                    } else if (status === "loading") {
-                        // The clipboard is being loaded asynchonously.
-                        // Poll the endpoint until the copying process is complete:
-                        const deferred = $.Deferred();
-                        const checkStatus = () => {
-                            $.getJSON(clipboardEndpoint, (pollData) => {
-                                const newStatus = pollData.content?.status;
-                                if (newStatus === "ready") {
-                                    this.refreshPasteButton(data);
-                                    this.clipboardBroadcastChannel.postMessage(pollData);
-                                    deferred.resolve(pollData);
-                                } else if (newStatus === "loading") {
-                                    setTimeout(checkStatus, 1_000);
-                                } else {
-                                    deferred.reject();
-                                    throw new Error(`Unexpected clipboard status "${newStatus}" in successful API response.`);
-                                }
-                            })
-                        }
-                        setTimeout(checkStatus, 1_000);
-                        return deferred;
-                    } else {
-                        throw new Error(`Unexpected clipboard status "${status}" in successful API response.`);
-                    }
-                });
+            ViewUtils.runOperationShowingMessage(gettext('Copying'), () => this.copyUsageKeyToClipboard(usageKeyToCopy));
+        },
+
+        copyUsageKeyToClipboard: function(usageKeyToCopy) {
+            const clipboardEndpoint = "/api/content-staging/v1/clipboard/";
+            return $.postJSON(
+                clipboardEndpoint,
+                { usage_key: usageKeyToCopy },
+            ).then((data) => {
+                const status = data.content?.status;
+                if (status === "ready") {
+                    this.refreshPasteButton(data);
+                    this.clipboardBroadcastChannel.postMessage(data);
+                    return data;
+                } else if (status === "loading") {
+                    const deferred = $.Deferred();
+                    const checkStatus = () => {
+                        $.getJSON(clipboardEndpoint, (pollData) => {
+                            const newStatus = pollData.content?.status;
+                            if (newStatus === "ready") {
+                                this.refreshPasteButton(pollData);
+                                this.clipboardBroadcastChannel.postMessage(pollData);
+                                deferred.resolve(pollData);
+                            } else if (newStatus === "loading") {
+                                setTimeout(checkStatus, 1_000);
+                            } else {
+                                deferred.reject();
+                                throw new Error(`Unexpected clipboard status "${newStatus}" in successful API response.`);
+                            }
+                        });
+                    };
+                    setTimeout(checkStatus, 1_000);
+                    return deferred;
+                }
+                throw new Error(`Unexpected clipboard status "${status}" in successful API response.`);
             });
+        },
+
+        createLibraryBlockId: function() {
+            if (window.crypto && window.crypto.randomUUID) {
+                return window.crypto.randomUUID().replace(/-/g, '');
+            }
+            return `savedtolibrary${Date.now()}`;
+        },
+
+        getLibrarySaveErrorMessage: function(jqXHR) {
+            const response = jqXHR && jqXHR.responseJSON;
+            if (response && response.detail && response.detail.block_type) {
+                return gettext('Tipo de bloque no compatible para guardar en biblioteca') + `: ${response.detail.block_type}`;
+            }
+            if (response && typeof response.detail === 'string') {
+                return response.detail;
+            }
+            if (response && Array.isArray(response.non_field_errors) && response.non_field_errors.length) {
+                return response.non_field_errors.join(', ');
+            }
+            if (response && typeof response === 'object') {
+                const firstKey = Object.keys(response)[0];
+                if (firstKey) {
+                    const value = response[firstKey];
+                    if (Array.isArray(value) && value.length) {
+                        return `${firstKey}: ${value.join(', ')}`;
+                    }
+                    if (typeof value === 'string') {
+                        return `${firstKey}: ${value}`;
+                    }
+                }
+            }
+            return gettext('No se pudo guardar el contenido en la biblioteca.');
+        },
+
+        showLibrarySaveSuccess: function(libraryId) {
+            new NotificationView.Info({
+                title: gettext('Guardado en biblioteca'),
+                message: gettext('El contenido se guardó correctamente en {libraryId}.')
+                    .replace('{libraryId}', libraryId),
+                minShown: 1200,
+                maxShown: 4000,
+            }).show();
+        },
+
+        pasteClipboardIntoLibrary: function(libraryId) {
+            return $.postJSON(
+                `/api/libraries/v2/${encodeURIComponent(libraryId)}/paste_clipboard/`,
+                { block_id: this.createLibraryBlockId() },
+            );
+        },
+
+        runSaveToLibraryFlow: function(usageKeyToCopy, libraryId) {
+            const deferred = $.Deferred();
+
+            ViewUtils.runOperationShowingMessage(gettext('Copying'), () => this.copyUsageKeyToClipboard(usageKeyToCopy))
+                .done(() => {
+                    ViewUtils.runOperationShowingMessage(gettext('Guardando...'), () => {
+                        return this.pasteClipboardIntoLibrary(libraryId);
+                    }).done(() => {
+                        this.showLibrarySaveSuccess(libraryId);
+                        deferred.resolve();
+                    }).fail((jqXHR) => {
+                        deferred.reject(this.getLibrarySaveErrorMessage(jqXHR));
+                    });
+                })
+                .fail((jqXHR) => {
+                    deferred.reject(this.getLibrarySaveErrorMessage(jqXHR));
+                });
+
+            return deferred.promise();
+        },
+
+        saveXBlockToLibrary: function(event) {
+            event.preventDefault();
+            const element = this.findXBlockElement(event.target);
+            const usageKeyToCopy = element.data('locator');
+            const modal = new SaveToLibraryModal({
+                onSave: (libraryId) => this.runSaveToLibraryFlow(usageKeyToCopy, libraryId),
+            });
+
+            modal.show();
         },
 
         duplicateXBlock: function(event) {

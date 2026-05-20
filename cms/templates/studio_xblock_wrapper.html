@@ -190,6 +190,11 @@ upstream_info = UpstreamLink.try_get_for_block(xblock)
                                             <li class="nav-item">
                                                 <a class="copy-button" href="#" role="button">${_("Copy to Clipboard")}</a>
                                             </li>
+                                            % if xblock.category in ['html', 'problem', 'video', 'openassessment']:
+                                                <li class="nav-item">
+                                                    <a class="save-to-library-button" href="#" role="button">${_("Save to Library")}</a>
+                                                </li>
+                                            % endif
                                         % endif
                                         % if can_add:
                                             <li class="nav-item">
